@@ -132,26 +132,31 @@ void create_children(char **command_buffer, int command_lines){
         }
         
     }
-    int wait_check;
-    for (int i = 0; i < command_lines; i++)
-    {   
-        wait(&wait_check);
-        if (wait_check > 0)
-        {
-            
-            exit(EXIT_FAILURE);
-        }
-    }
     for (int i = 0; i < command_lines - 1; i++)
     {
         close(fd[i][0]);
         close(fd[i][1]);
     }
+    for (int i = 0; i < command_lines; i++) {
+        int status;
+        waitpid(pid[i], &status, 0);
+    }
+    
    return;
 }
 void child_process(char **command_buffer, int command_lines,int fd[][2],int current_index,int childnr){
     int pipeamount = command_lines-1;
+    char *execbuff[Maximum_allowed_char];
+    int j = 0;
+    int i = current_index;
     
+    while(command_buffer[i] != NULL){
+        execbuff[j] = strdup(command_buffer[i]);
+        i++;
+        j++;
+    }
+    execbuff[j] = NULL;
+
     if(command_lines > 1){
         if(childnr == 0){//Parent to child
             
@@ -160,6 +165,7 @@ void child_process(char **command_buffer, int command_lines,int fd[][2],int curr
                 close(fd[childnr][1]);
                 exit(EXIT_FAILURE);
             }
+            
             perror("dup1");
         }
         else if(childnr == pipeamount){//Child to stdout
@@ -169,6 +175,7 @@ void child_process(char **command_buffer, int command_lines,int fd[][2],int curr
                 close(fd[childnr-1][1]);
                 exit(EXIT_FAILURE);
             }
+            
         }
 
         else{//Child to child
@@ -177,26 +184,25 @@ void child_process(char **command_buffer, int command_lines,int fd[][2],int curr
                 close(fd[childnr-1][0]);
                 exit(EXIT_FAILURE);
             }
+            
             perror("dup2");
             if(dup2(fd[childnr][1],STDOUT_FILENO) < 0){
                 perror("dup middle stdout");
                 close(fd[childnr][1]);
                 exit(EXIT_FAILURE);
-            } 
+            }
+            
             perror("dup3");
         }
     }
     
-    
-    
-    char *execbuff[Maximum_allowed_char];
-    int j = 0;
-    while(command_buffer[current_index] != NULL){
-        execbuff[j] = strdup(command_buffer[current_index]);
-        current_index++;
-        j++;
+    for (int i = 0; i < command_lines - 1; i++)
+    {
+        close(fd[i][0]);
+        close(fd[i][1]);
     }
-    execbuff[j] = NULL;
+    
+    
     if(execvp(execbuff[0], execbuff) < 0){
         perror("exec");
         exit(EXIT_FAILURE);
