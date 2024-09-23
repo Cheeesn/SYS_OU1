@@ -1,2 +1,0 @@
-cat -n mexec.c
-grep -B4 -A2 return

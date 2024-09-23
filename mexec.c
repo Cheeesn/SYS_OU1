@@ -6,18 +6,18 @@
 #include <sys/wait.h>
 #define Maximum_allowed_char 1024
 
-int reading_command_lines(FILE *fp, char **command_buffer );
+int reading_command_lines(FILE *fp, char **command_buffer, int* command_args);
 
 void temp_print_function(char** command_arguments, int number_of_args);
-void kill_function_arr(int amount_of_index, char **command_buffer);
-void create_children(char **command_buffer, int command_lines);
-void child_process(char **command_buffer, int command_lines, int fd[][2],int current_index, int childnr);
+void kill_function_arr(int* amount_of_index, char **command_buffer);
+void create_children(FILE *fp,char **command_buffer, int command_lines,int* command_args);
+void child_process(FILE *fp,char **command_buffer, int command_lines, int fd[][2],int current_index, int childnr,int* command_args);
 
 int main(int argc, char *argv[]) {
     FILE *fp = NULL;
     int command_lines = 0;
-    
-    char **command_buffer = malloc(Maximum_allowed_char+1);
+    int command_args = 0;
+    char **command_buffer = malloc(sizeof(char*)*Maximum_allowed_char);
     
     if(command_buffer == NULL){
         perror("Memory allocation error");
@@ -41,11 +41,11 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    command_lines = reading_command_lines(fp, command_buffer );
+    command_lines = reading_command_lines(fp, command_buffer, &command_args);
     
-    create_children(command_buffer,command_lines);
+    create_children(fp,command_buffer,command_lines,&command_args);
     
-    kill_function_arr(command_lines,command_buffer);
+    kill_function_arr(&command_args, command_buffer);
     
     
     if(fp != stdin){
@@ -55,32 +55,37 @@ int main(int argc, char *argv[]) {
     
     return 0;
 }
-int reading_command_lines(FILE *fp, char **command_buffer) {
+int reading_command_lines(FILE *fp, char **command_buffer,int* command_args) {
     
-    char *buffer = malloc((Maximum_allowed_char+1));
+    char buffer[Maximum_allowed_char];
     int command_lines = 0;
     int i = 0;
-    
+    command_buffer[i] = NULL;
     while(fgets(buffer, Maximum_allowed_char, fp) != NULL){//Read each line
-        buffer[strcspn(buffer, "\n")] = 0;
-        command_buffer[i] = realloc(command_buffer[i], sizeof(strlen(buffer)+1));
+        buffer[strcspn(buffer, "\n")] = 0;//removes newline
+        
         char *token = strtok(buffer," "); 
-    
+        command_buffer[i] = malloc(strlen(buffer));
         while(token != NULL){
-            command_buffer[i] = realloc(command_buffer[i],sizeof(strlen(token)+1));
+            
+            command_buffer[i] = realloc(command_buffer[i],strlen(token)+1);
             strcpy(command_buffer[i], token);
             
-            token = strtok(NULL," ");
+            
             
             i++;
+            command_buffer[i] = NULL;
+            token = strtok(NULL," ");
         }
-        command_buffer[i] = NULL;
+        *command_buffer = realloc(*command_buffer,sizeof(char*)*i);
+        
+        
         i++;
         command_lines++;
         
-        memset(buffer,0,Maximum_allowed_char+1);//Clearing buffer so previous text is not left
+        *command_args = i;
     }
-    free(buffer);
+    
     
     return command_lines;
 }
@@ -88,14 +93,15 @@ int reading_command_lines(FILE *fp, char **command_buffer) {
 
 
 
-void kill_function_arr(int amount_of_index, char **command_buffer){
-    for(int i = 0; amount_of_index>i ;i++){
+void kill_function_arr(int* amount_of_index, char **command_buffer){
+    for(int i = 0; *amount_of_index>i ;i++){
         free(command_buffer[i]);
     }
+    
     free(command_buffer);
     return;
 }
-void create_children(char **command_buffer, int command_lines){
+void create_children(FILE *fp,char **command_buffer, int command_lines,int* command_args){
     int fd[command_lines-1][2];
     int nullfound = 0;
     int command_index = 0;
@@ -127,12 +133,12 @@ void create_children(char **command_buffer, int command_lines){
                 command_index++;
             }
             
-            child_process(command_buffer,command_lines,fd, command_index,i);
+            child_process(fp,command_buffer,command_lines,fd, command_index,i,command_args);
             return;
         }
         
     }
-    for (int i = 0; i < command_lines - 1; i++)
+    for (int i = 0; i < command_lines - 1; i++)//Parent closing pipes
     {
         close(fd[i][0]);
         close(fd[i][1]);
@@ -140,38 +146,44 @@ void create_children(char **command_buffer, int command_lines){
     for (int i = 0; i < command_lines; i++) {
         int status;
         waitpid(pid[i], &status, 0);
+        if(status > 0){
+            kill_function_arr(command_args,command_buffer);
+        
+            fclose(fp);
+            exit(EXIT_FAILURE);
+        }
     }
     
    return;
 }
-void child_process(char **command_buffer, int command_lines,int fd[][2],int current_index,int childnr){
+void child_process(FILE *fp,char **command_buffer, int command_lines,int fd[][2],int current_index,int childnr,int* command_args){
     int pipeamount = command_lines-1;
     char *execbuff[Maximum_allowed_char];
     int j = 0;
     int i = current_index;
     
     while(command_buffer[i] != NULL){
-        execbuff[j] = strdup(command_buffer[i]);
+        execbuff[j] = command_buffer[i];
         i++;
         j++;
     }
     execbuff[j] = NULL;
-
+    
     if(command_lines > 1){
         if(childnr == 0){//Parent to child
             
             if(dup2(fd[childnr][1],STDOUT_FILENO) < 0){
-                perror("dup1");
+                
                 close(fd[childnr][1]);
                 exit(EXIT_FAILURE);
             }
             
-            perror("dup1");
+            
         }
         else if(childnr == pipeamount){//Child to stdout
             
             if(dup2(fd[childnr-1][0],STDIN_FILENO) < 0){
-                perror("dup last");
+                
                 close(fd[childnr-1][1]);
                 exit(EXIT_FAILURE);
             }
@@ -180,23 +192,23 @@ void child_process(char **command_buffer, int command_lines,int fd[][2],int curr
 
         else{//Child to child
             if(dup2(fd[childnr-1][0],STDIN_FILENO) < 0){
-                perror("dup middle stdin");
+                
                 close(fd[childnr-1][0]);
                 exit(EXIT_FAILURE);
             }
             
-            perror("dup2");
+            
             if(dup2(fd[childnr][1],STDOUT_FILENO) < 0){
-                perror("dup middle stdout");
+                
                 close(fd[childnr][1]);
                 exit(EXIT_FAILURE);
             }
             
-            perror("dup3");
+            
         }
     }
     
-    for (int i = 0; i < command_lines - 1; i++)
+    for (int i = 0; i < command_lines - 1; i++)//Children closing pipes
     {
         close(fd[i][0]);
         close(fd[i][1]);
@@ -204,10 +216,13 @@ void child_process(char **command_buffer, int command_lines,int fd[][2],int curr
     
     
     if(execvp(execbuff[0], execbuff) < 0){
-        perror("exec");
+        
+        perror(execbuff[0]);
+        kill_function_arr(command_args,command_buffer);
+        
+        fclose(fp);
         exit(EXIT_FAILURE);
+        
     }
     
-    
- 
 }

@@ -1,3 +1,6 @@
-cat -n mexec.c
-grep -B4 -A2 return
-less
+strings mexec
+grep -v [[:punct:][:space:]]
+sort
+uniq
+tail -n 10
+badass
