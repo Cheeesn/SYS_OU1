@@ -7,7 +7,6 @@
 #define Maximum_allowed_char 1024
 
 int reading_command_lines(FILE *fp, char **command_buffer, int* command_args);
-
 void temp_print_function(char** command_arguments, int number_of_args);
 void kill_function_arr(int* amount_of_index, char **command_buffer);
 void create_children(FILE *fp,char **command_buffer, int command_lines,int* command_args);
@@ -55,6 +54,14 @@ int main(int argc, char *argv[]) {
     
     return 0;
 }
+/**
+ * reading_command_lines() - Reads lines from a file and stores command tokens.
+ * @fp: A pointer to the file (or stdin) to read the command lines from.
+ * @command_buffer: A double pointer to store the commands and arguments.
+ * @command_args: A pointer to an integer that stores the total number of arguments.
+ *
+ * Returns: The total number of command lines read from the input.
+ */
 int reading_command_lines(FILE *fp, char **command_buffer,int* command_args) {
     
     char buffer[Maximum_allowed_char];
@@ -89,10 +96,13 @@ int reading_command_lines(FILE *fp, char **command_buffer,int* command_args) {
     
     return command_lines;
 }
-
-
-
-
+/**
+ * kill_function_arr() - Frees memory allocated for command buffer.
+ * @amount_of_index: A pointer to the total number of arguments in the command buffer.
+ * @command_buffer: A double pointer that holds the command and argument strings.
+ *
+ * Returns: Nothing. Frees allocated memory for each command in the buffer.
+ */
 void kill_function_arr(int* amount_of_index, char **command_buffer){
     for(int i = 0; *amount_of_index>i ;i++){
         free(command_buffer[i]);
@@ -101,6 +111,15 @@ void kill_function_arr(int* amount_of_index, char **command_buffer){
     free(command_buffer);
     return;
 }
+/**
+ * create_children() - Forks child processes and sets up inter-process communication.
+ * @fp: A pointer to the input file (or stdin).
+ * @command_buffer: A double pointer that stores the commands and their arguments.
+ * @command_lines: The total number of command lines.
+ * @command_args: A pointer to the total number of arguments across all commands.
+ *
+ * Returns: Nothing. Creates child processes, pipes, and manages their execution.
+ */
 void create_children(FILE *fp,char **command_buffer, int command_lines,int* command_args){
     int fd[command_lines-1][2];
     int nullfound = 0;
@@ -156,6 +175,18 @@ void create_children(FILE *fp,char **command_buffer, int command_lines,int* comm
     
    return;
 }
+/**
+ * child_process() - Executes the command for each child and sets up pipes.
+ * @fp: A pointer to the input file (or stdin).
+ * @command_buffer: A double pointer that holds the commands and their arguments.
+ * @command_lines: The total number of command lines.
+ * @fd: A 2D array representing pipes between processes.
+ * @current_index: The index of the command to be executed by the child process.
+ * @childnr: The current child process number in the chain.
+ * @command_args: A pointer to the total number of arguments across all commands.
+ *
+ * Returns: Nothing. Executes the command using execvp() and redirects input/output as needed.
+ */
 void child_process(FILE *fp,char **command_buffer, int command_lines,int fd[][2],int current_index,int childnr,int* command_args){
     int pipeamount = command_lines-1;
     char *execbuff[Maximum_allowed_char];
