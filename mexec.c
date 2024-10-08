@@ -1,17 +1,13 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/wait.h>
-#define Maximum_allowed_char 1024
-
-int reading_command_lines(FILE *fp, char **command_buffer, int* command_args);
-void temp_print_function(char** command_arguments, int number_of_args);
-void kill_function_arr(int* amount_of_index, char **command_buffer);
-void create_children(FILE *fp,char **command_buffer, int command_lines,int* command_args);
-void child_process(FILE *fp,char **command_buffer, int command_lines, int fd[][2],int current_index, int childnr,int* command_args);
-
+#include "mexec.h"
+/*
+ * Kurs:5DV088 Systemnäraprogrammering
+ *
+ * Obligatorisk uppgift 1
+ * Author: Jon Sellgren (hed22jsn@cs.umu.se).
+ *
+ * Version information:
+ *   2024-09-23: v1.0.
+ */
 int main(int argc, char *argv[]) {
     FILE *fp = NULL;
     int command_lines = 0;
@@ -22,36 +18,34 @@ int main(int argc, char *argv[]) {
         perror("Memory allocation error");
         exit(EXIT_FAILURE);
     }
-    if(argc == 1) {
+    
+    if(argc == 1) {//Checking if its stdin input or a file
         fp = stdin;
     }
+    
     else {
         fp = fopen(argv[1] ,"r");
     }
-    if(argc > 2){
-
+    
+    if(argc > 2){//Checking if its the right amount of arguments
         fprintf(stderr,"Too many arguments");
         exit(EXIT_FAILURE);
     }
     
-    if(fp == NULL){
-        fprintf(stderr,"Could not open file\n");
-        perror("File opening error:");
+    if(fp == NULL){//Checking if file is readable
+        
+        perror(argv[1]);
         exit(EXIT_FAILURE);
     }
     
     command_lines = reading_command_lines(fp, command_buffer, &command_args);
-    
     create_children(fp,command_buffer,command_lines,&command_args);
-    
     kill_function_arr(&command_args, command_buffer);
     
-    
-    if(fp != stdin){
+    if(fp != stdin){//closing file if its not stdin
         fclose(fp);
         fp = NULL;
     }
-    
     return 0;
 }
 /**
@@ -64,35 +58,27 @@ int main(int argc, char *argv[]) {
  */
 int reading_command_lines(FILE *fp, char **command_buffer,int* command_args) {
     
-    char buffer[Maximum_allowed_char];
+    char buffer[Maximum_allowed_char];//Buffer for reading the file
     int command_lines = 0;
     int i = 0;
-    command_buffer[i] = NULL;
-    while(fgets(buffer, Maximum_allowed_char, fp) != NULL){//Read each line
+    command_buffer[command_lines] = NULL;
+
+    while(fgets(buffer, Maximum_allowed_char, fp) != NULL){
+        
         buffer[strcspn(buffer, "\n")] = 0;//removes newline
-        
-        char *token = strtok(buffer," "); 
-        command_buffer[i] = malloc(strlen(buffer));
-        while(token != NULL){
-            
-            command_buffer[i] = realloc(command_buffer[i],strlen(token)+1);
-            strcpy(command_buffer[i], token);
-            
-            
-            
-            i++;
-            command_buffer[i] = NULL;
-            token = strtok(NULL," ");
+        command_buffer[i] = malloc(strlen(buffer));//Allocating command_buffer
+        if(command_buffer[i] == NULL){
+            perror("Memory allocation error");
+            exit(EXIT_FAILURE);
         }
-        *command_buffer = realloc(*command_buffer,sizeof(char*)*i);
+        
+        i = tokenize_command(command_buffer,buffer,i);
         
         
-        i++;
-        command_lines++;
+        command_lines++;//counts the amount of commands
         
-        *command_args = i;
+        *command_args = i;//Returning argument amount for returning memory later
     }
-    
     
     return command_lines;
 }
@@ -105,10 +91,9 @@ int reading_command_lines(FILE *fp, char **command_buffer,int* command_args) {
  */
 void kill_function_arr(int* amount_of_index, char **command_buffer){
     for(int i = 0; *amount_of_index>i ;i++){
-        free(command_buffer[i]);
+        free(command_buffer[i]);//freeing every index
     }
-    
-    free(command_buffer);
+    free(command_buffer);//freeing the whole array
     return;
 }
 /**
@@ -127,7 +112,7 @@ void create_children(FILE *fp,char **command_buffer, int command_lines,int* comm
     pid_t pid[command_lines];
     int pipeamount = command_lines-1;
     
-    for(int i = 0; i < pipeamount; i++){
+    for(int i = 0; i < pipeamount; i++){//Creating pipes equal to the amount of commands-1
         
         if(pipe(fd[i]) == -1){
             perror("Pipe failed");
@@ -135,39 +120,39 @@ void create_children(FILE *fp,char **command_buffer, int command_lines,int* comm
         }
     }
     
-    for(int i = 0; i < command_lines; i++){
+    for(int i = 0; i < command_lines; i++){//Starting fork process
         if((pid[i] = fork()) == -1){
             perror("Fork failed");
             exit(EXIT_FAILURE);
         }
-        if(pid[i] == 0){
+        if(pid[i] == 0){//Making sure its a parent
             
             nullfound = 0;
             command_index = 0;
             
-            while(nullfound != i){
+            while(nullfound != i){//Looking for NULL to find the start of each command 
                 if(command_buffer[command_index] == NULL){
                     nullfound++;
                 }
                 command_index++;
             }
             
-            child_process(fp,command_buffer,command_lines,fd, command_index,i,command_args);
+            child_process(fp,command_buffer,command_lines,fd, command_index,i,command_args);//Starting the child process
             return;
         }
         
     }
-    for (int i = 0; i < command_lines - 1; i++)//Parent closing pipes
-    {
-        close(fd[i][0]);
-        close(fd[i][1]);
-    }
-    for (int i = 0; i < command_lines; i++) {
+
+     close_pipes(pipeamount,fd);
+
+    for (int i = 0; i < command_lines; i++) {//Waiting for children to finish
         int status;
-        waitpid(pid[i], &status, 0);
+        if(waitpid(pid[i], &status, 0) < 0){
+            perror("");
+            exit(EXIT_FAILURE);
+        }
         if(status > 0){
             kill_function_arr(command_args,command_buffer);
-        
             fclose(fp);
             exit(EXIT_FAILURE);
         }
@@ -193,7 +178,7 @@ void child_process(FILE *fp,char **command_buffer, int command_lines,int fd[][2]
     int j = 0;
     int i = current_index;
     
-    while(command_buffer[i] != NULL){
+    while(command_buffer[i] != NULL){//Storing the command and arguments to exec later
         execbuff[j] = command_buffer[i];
         i++;
         j++;
@@ -201,59 +186,73 @@ void child_process(FILE *fp,char **command_buffer, int command_lines,int fd[][2]
     execbuff[j] = NULL;
     
     if(command_lines > 1){
-        if(childnr == 0){//Parent to child
+        if(childnr == 0){
             
-            if(dup2(fd[childnr][1],STDOUT_FILENO) < 0){
-                
+            if(dup2(fd[childnr][1],STDOUT_FILENO) < 0){//Redirecting stdout to the current pipes write
                 close(fd[childnr][1]);
                 exit(EXIT_FAILURE);
             }
             
-            
         }
-        else if(childnr == pipeamount){//Child to stdout
-            
-            if(dup2(fd[childnr-1][0],STDIN_FILENO) < 0){
-                
-                close(fd[childnr-1][1]);
-                exit(EXIT_FAILURE);
-            }
-            
-        }
+        else if(childnr == pipeamount){
 
-        else{//Child to child
-            if(dup2(fd[childnr-1][0],STDIN_FILENO) < 0){
-                
+            if(dup2(fd[childnr-1][0],STDIN_FILENO) < 0){//Redirecting in stream to previous pipes read and checking if it fails
                 close(fd[childnr-1][0]);
                 exit(EXIT_FAILURE);
             }
+        }
+
+        else{
             
-            
-            if(dup2(fd[childnr][1],STDOUT_FILENO) < 0){
-                
+            if(dup2(fd[childnr-1][0],STDIN_FILENO) < 0){//Redirecting in stream to previous pipes read and checking if it fails
+                close(fd[childnr-1][0]);
+                exit(EXIT_FAILURE);
+            }
+            if(dup2(fd[childnr][1],STDOUT_FILENO) < 0){//Redirecting out stream to current pipes write and checking if it fails
                 close(fd[childnr][1]);
                 exit(EXIT_FAILURE);
             }
-            
-            
         }
     }
     
-    for (int i = 0; i < command_lines - 1; i++)//Children closing pipes
-    {
+    close_pipes(pipeamount,fd);
+    
+    if(execvp(execbuff[0], execbuff) < 0){
+        //Cleanup in case of faulty command
+        perror(execbuff[0]);
+        kill_function_arr(command_args,command_buffer);
+        fclose(fp);
+        exit(EXIT_FAILURE);
+    }
+    
+}
+int tokenize_command(char **command_buffer, char *read_buffer, int index){
+    
+    char *token = strtok(read_buffer," "); 
+    int i = index; 
+    
+    while(token != NULL){
+            command_buffer = realloc(command_buffer,sizeof(char *) * (i + 1024));
+            command_buffer[i] = realloc(command_buffer[i],strlen(token)+1);//Reallocating the buffer so it matches the size + NULL
+            if(command_buffer[i] == NULL){
+                perror("Memory allocation error");
+                exit(EXIT_FAILURE);
+            }
+            strcpy(command_buffer[i], token);//Storing tokenb
+            i++;
+            command_buffer[i] = NULL;//NULL at the end of the command
+            token = strtok(NULL," ");
+        }
+        
+        i++;//Extra count because of added NULL
+        
+
+    return i;
+}
+void close_pipes(int pipeamount, int fd[][2]){
+
+    for (int i = 0; i < pipeamount; i++){//Children closing pipes that are not in use
         close(fd[i][0]);
         close(fd[i][1]);
     }
-    
-    
-    if(execvp(execbuff[0], execbuff) < 0){
-        
-        perror(execbuff[0]);
-        kill_function_arr(command_args,command_buffer);
-        
-        fclose(fp);
-        exit(EXIT_FAILURE);
-        
-    }
-    
 }
