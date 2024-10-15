@@ -12,5 +12,5 @@
 
 #define BLOCK_SIZE 512
 char** check_arguments(char *argv[], int argc,int* threads, int* num_files);
-int traverse_directory(const char *path);
+int traverse_directory(const char *path, int *exit_code);
 void kill_function_arr(int amount_of_index, char **array);
