@@ -1,0 +1,5 @@
+strings mexec
+grep -v [[:punct:][:space:]]
+sort
+uniq
+tail -n 10

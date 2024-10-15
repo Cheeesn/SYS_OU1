@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "random": "c",
+        "string.h": "c",
+        "stdio.h": "c",
+        "types.h": "c",
+        "__locale": "c",
+        "filesystem": "c",
+        "locale": "c",
+        "mexec.h": "c"
+    }
+}

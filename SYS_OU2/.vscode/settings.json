@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "mmake.h": "c",
+        "stat.h": "c",
+        "*.tcc": "c",
+        "fstream": "c",
+        "time.h": "c",
+        "unistd.h": "c",
+        "parser.h": "c"
+    }
+}
