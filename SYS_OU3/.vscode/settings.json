@@ -5,6 +5,7 @@
         "random": "c",
         "types.h": "c",
         "chrono": "c",
-        "variant": "c"
+        "variant": "c",
+        "mdu.h": "c"
     }
 }
