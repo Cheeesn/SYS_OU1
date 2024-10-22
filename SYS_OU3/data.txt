@@ -1,24 +1,150 @@
-/usr/lib
-0,546
-/usr/lib
-0,572
-/usr/lib
-0,554
-/usr/lib
-0,557
-/usr/lib
-0,557
-/usr/lib
-0,566
-/usr/lib
-0,546
-/usr/lib
-0,556
-/usr/lib
-0,559
-/usr/lib
-0,557
-/usr/lib
-0,547
-/usr/lib
-0,545
+0,811
+0,807
+0,810
+0,814
+0,819
+0,821
+0,278
+0,248
+0,251
+0,347
+0,225
+0,284
+0,353
+0,232
+0,241
+script: line 4: 1161704 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+1,749
+0,245
+0,228
+0,246
+0,249
+0,244
+0,232
+script: line 4: 1161852 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+2,327
+0,244
+0,221
+0,248
+0,247
+0,249
+0,251
+script: line 4: 1162056 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+2,987
+0,232
+0,230
+script: line 4: 1162164 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+3,195
+script: line 4: 1162210 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+3,554
+script: line 4: 1162255 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+3,554
+0,234
+script: line 4: 1162341 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+3,685
+script: line 4: 1162421 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+3,787
+script: line 4: 1162469 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+3,740
+0,254
+script: line 4: 1162569 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+3,697
+script: line 4: 1162618 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,205
+script: line 4: 1162670 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,106
+script: line 4: 1162742 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,361
+script: line 4: 1162798 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,395
+0,247
+0,247
+script: line 4: 1162966 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,278
+script: line 4: 1163119 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,283
+script: line 4: 1163178 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,392
+0,235
+script: line 4: 1163300 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,822
+script: line 4: 1163361 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,738
+script: line 4: 1163542 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,882
+script: line 4: 1163784 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+4,927
+script: line 4: 1163854 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,096
+script: line 4: 1164136 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,170
+script: line 4: 1164211 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,390
+script: line 4: 1164301 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,256
+script: line 4: 1164378 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,373
+script: line 4: 1164633 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,358
+Warning: Failed to get stats for '/usr/lib/libresid-builder.so.0.0.1': lstat: Bad address
+script: line 4: 1164729 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,613
+script: line 4: 1164859 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,714
+script: line 4: 1165114 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,671
+script: line 4: 1165429 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,680
+script: line 4: 1165823 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,568
+script: line 4: 1166947 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,909
+script: line 4: 1167261 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+5,645
+script: line 4: 1167539 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+6,601
+script: line 4: 1167800 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+7,324
+script: line 4: 1167895 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,715
+script: line 4: 1168178 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+6,614
+script: line 4: 1168441 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,456
+script: line 4: 1168578 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,559
+script: line 4: 1169033 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,386
+script: line 4: 1169241 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,330
+script: line 4: 1169607 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,507
+script: line 4: 1169912 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,573
+script: line 4: 1170426 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,674
+script: line 4: 1170707 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,461
+Warning: Failed to get stats for 'pä,(U': lstat: No such file or directory
+script: line 4: 1170812 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,486
+script: line 4: 1170921 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,709
+script: line 4: 1171469 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,459
+script: line 4: 1171629 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,704
+script: line 4: 1171754 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,766
+script: line 4: 1171881 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,642
+script: line 4: 1171997 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,465
+script: line 4: 1172106 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,697
+script: line 4: 1172218 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,720
+script: line 4: 1172336 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,816
+script: line 4: 1172466 Segmentation fault      (core dumped) ./mdu -j $i /usr/lib
+8,884

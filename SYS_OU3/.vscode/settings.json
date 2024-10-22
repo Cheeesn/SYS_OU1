@@ -26,6 +26,7 @@
         "unordered_set": "c",
         "utility": "c",
         "vector": "c",
-        "filesystem": "c"
+        "filesystem": "c",
+        "iterator": "c"
     }
 }

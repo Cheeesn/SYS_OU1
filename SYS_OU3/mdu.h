@@ -37,6 +37,7 @@ typedef struct {
  * Returns: None.
  */
 void add_directory_files(const char *path, ThreadData *thread_data);
+
 void initialize_resources(pthread_mutex_t *mutex, sem_t *semaphore, int threads, ThreadData *thread_data);
 ThreadData *init_struct(void);
 /**
@@ -63,7 +64,7 @@ void* thread_calculate_size(void* arg);
  *
  * Returns: A pointer to an array of integers containing sizes of files.
  */
-int* thread_handler(int threads, ThreadData *thread_data);
+int thread_handler(int threads, ThreadData *thread_data);
 
 /**
  * calculate_size() - Calculates the size of a single file.
@@ -120,4 +121,4 @@ ThreadData *check_arguments(char *argv[], int argc, int *threads, ThreadData * t
  *
  * Returns: None.
  */
-void print_function(ThreadData *thread_data, int *sizes);
+void print_function(ThreadData *thread_data, int total_size);
