@@ -14,10 +14,7 @@ typedef struct {
     char **files;        // Array of file paths
     int total_files;     // Total number of files
     int current_index;   // Current index for file processing
-    int num_files;       // Number of command-line files
-    char **arguments;    // Original command-line arguments
-    pthread_mutex_t *mutex; 
-    sem_t *semaphore;    
+    pthread_mutex_t *mutex;    
     int *sizes;
     int exit_code;          // Sizes of files
 } ThreadData;
@@ -38,8 +35,7 @@ typedef struct {
  */
 void add_directory_files(const char *path, ThreadData *thread_data);
 
-void initialize_resources(pthread_mutex_t *mutex, sem_t *semaphore, int threads, ThreadData *thread_data);
-ThreadData *init_struct(void);
+ThreadData *init_struct(pthread_mutex_t *mutex);
 /**
  * destroy_resources() - Destroys mutex and semaphore resources.
  * @mutex: A pointer to the mutex to be destroyed.
@@ -47,7 +43,7 @@ ThreadData *init_struct(void);
  *
  * Returns: None.
  */
-void destroy_resources(pthread_mutex_t *mutex, sem_t *semaphore);
+void destroy_resources(pthread_mutex_t *mutex);
 
 /**
  * thread_calculate_size() - Thread function that calculates the size of files.
@@ -112,7 +108,7 @@ void store_file_paths(const char *path, ThreadData *thread_data, int *exit_code)
  *
  * Returns: A pointer to an array of strings containing valid file paths.
  */
-ThreadData *check_arguments(char *argv[], int argc, int *threads, ThreadData * thread_data);
+int check_arguments(char *argv[], int argc, int threads);
 
 /**
  * print_function() - Prints the total size of files for each argument.
@@ -122,3 +118,4 @@ ThreadData *check_arguments(char *argv[], int argc, int *threads, ThreadData * t
  * Returns: None.
  */
 void print_function(ThreadData *thread_data, int total_size);
+void process_argument(char *arg, pthread_mutex_t *mutex,int threads);

@@ -1,75 +1,60 @@
-    /*
-    * Kurs:5DV088 Systemnäraprogrammering
-    *
-    * Obligatorisk uppgift 3
-    * Author: Jon Sellgren (hed22jsn@cs.umu.se).
-    *
-    * Version information:
-    *   2024-10-22: v1.0.
-    */
-    #include "mdu.h"
+/*
+* Kurs:5DV088 Systemnäraprogrammering
+*
+* Obligatorisk uppgift 3
+* Author: Jon Sellgren (hed22jsn@cs.umu.se).
+*
+* Version information:
+*   2024-10-22: v1.0.
+*/
+#include "mdu.h"
 
-    int main(int argc, char *argv[]) {
-        int threads = 1;
-        
+int main(int argc, char *argv[]) {
+    int threads = 1;
+    pthread_mutex_t mutex;
+    
 
-        pthread_mutex_t mutex;
-        sem_t semaphore;
+    // Initialize ThreadData and collect initial settings (like thread count)
+    
+    threads = check_arguments(argv, argc, threads);
 
-        // Collect file paths and initialize thread data
-        ThreadData *thread_data = init_struct();
-        thread_data = check_arguments(argv, argc, &threads, thread_data);
-        
-        initialize_resources(&mutex, &semaphore, threads, thread_data);
-        
-        // Calculate sizes for all files (multithreaded if threads > 1)
-        
-        int sizes = thread_handler(threads, thread_data);
-        
-        print_function(thread_data, sizes);
-        if (thread_data->exit_code == 1) {
-            exit(EXIT_FAILURE);
-        }
-        // Cleanup allocated resources
-        destroy_struct(thread_data);
-        destroy_resources(&mutex, &semaphore);
+    // Initialize resources (mutex, semaphore)
+    
 
-
-        
-        return 0;
+    // Loop through each argument (file or directory) and process it
+    for (int i = optind; i < argc; i++) {
+       process_argument(argv[i], &mutex, threads);
     }
-ThreadData *init_struct(void){
+
+    // Cleanup allocated resources for the main thread data
+    //destroy_struct(thread_data);
+    destroy_resources(&mutex);
+
+    return 0;
+}
+ThreadData *init_struct(pthread_mutex_t *mutex){
     ThreadData *thread_data = malloc(sizeof(ThreadData));
     thread_data->files = NULL;
-    thread_data->arguments = NULL;
-    thread_data->num_files = 0;
-    thread_data->total_files = 0;
+    thread_data->total_files = 1;
     thread_data->sizes = 0;
-    thread_data->arguments = 0;
     thread_data->current_index = 0;
     thread_data->exit_code = 0;
+    pthread_mutex_init(mutex, NULL);
+    thread_data->mutex = mutex;
     return thread_data;
 }
-void initialize_resources(pthread_mutex_t *mutex, sem_t *semaphore, int threads, ThreadData *thread_data) {
-    pthread_mutex_init(mutex, NULL);
-    sem_init(semaphore, 0, threads); // Initialize semaphore with thread count
-    thread_data->mutex = mutex;
-    thread_data->semaphore = semaphore;
-}
 
-
-void destroy_resources(pthread_mutex_t *mutex, sem_t *semaphore) {
+void destroy_resources(pthread_mutex_t *mutex) {
     pthread_mutex_destroy(mutex);
-    sem_destroy(semaphore);
 }
 
 void* thread_calculate_size(void* arg) {
     ThreadArgs *thread_args = (ThreadArgs*)arg;
     ThreadData *data = thread_args->thread_data;
-    int thread_size = 0; // Local size for this thread
+    int thread_size = 0; 
 
     while (1) {
-        int file_index; // Declare file_index outside the lock
+        int file_index; 
 
         pthread_mutex_lock(data->mutex);
         
@@ -82,7 +67,7 @@ void* thread_calculate_size(void* arg) {
         // Get the next file to process
         file_index = data->current_index++; // Use the current index
         pthread_mutex_unlock(data->mutex);
-        
+        //fprintf(stderr,"%s\n", data->files[data->current_index]);
         struct stat path_stat;
         if (lstat(data->files[file_index], &path_stat) != 0) {
             fprintf(stderr, "Warning: Failed to get stats for '%s': ", data->files[file_index]);
@@ -100,17 +85,17 @@ void* thread_calculate_size(void* arg) {
     }
 
     // Store the calculated size in the thread_data structure
-    pthread_mutex_lock(data->mutex);
+    
     data->sizes[thread_args->thread_index] = thread_size; // Save this thread's size
-    pthread_mutex_unlock(data->mutex);
+    
 
     return NULL;
 }
 
 
- int thread_handler(int threads, ThreadData *thread_data) {
+int thread_handler(int threads, ThreadData *thread_data) {
     int total_size = 0;
-
+    
     // Allocate memory for sizes for each thread
     thread_data->sizes = malloc(sizeof(int) * threads);
     if (!thread_data->sizes) {
@@ -127,12 +112,10 @@ void* thread_calculate_size(void* arg) {
         thread_args[i].size = &thread_data->sizes[i]; // Pass the pointer to the thread's size
 
         // Create thread to calculate sizes
-        
         if (pthread_create(&thread_ids[i], NULL, thread_calculate_size, &thread_args[i]) != 0) {
             perror("Failed to create thread");
             exit(EXIT_FAILURE);
         }
-        
     }
 
     // Wait for all threads to complete and aggregate sizes
@@ -148,30 +131,26 @@ void* thread_calculate_size(void* arg) {
     return total_size; // Return the total size calculated
 }
 
-    int calculate_size(const char *path) {
-        struct stat file_stat;
-        if (lstat(path, &file_stat) != 0) {
-            fprintf(stderr, "Warning: Failed to get stats for '%s': ", path);
-            perror("lstat");
-            return 0; // Return 0 size for unreadable files
-        }
-
-        return file_stat.st_blocks; // Return size in 512-byte blocks
+int calculate_size(const char *path) {
+    struct stat file_stat;
+    if (lstat(path, &file_stat) != 0) {
+        fprintf(stderr, "Warning: Failed to get stats for '%s': ", path);
+        perror("lstat");
+        return 0; // Return 0 size for unreadable files
     }
 
+    return file_stat.st_blocks; // Return size in 512-byte blocks
+}
 
-    void destroy_struct(ThreadData *thread_data) {
-        for (int i = 0; i < thread_data->total_files; i++) {
-            free(thread_data->files[i]);
-        }
-        for(int i = 0; i < thread_data->num_files;i++){
-            free(thread_data->arguments[i]);
-        }
-        free(thread_data->files);
-        free(thread_data->arguments);
-        free(thread_data);
-        
+
+void destroy_struct(ThreadData *thread_data) {
+    for (int i = 0; i < thread_data->total_files; i++) {
+        free(thread_data->files[i]);
     }
+    free(thread_data->files);
+    free(thread_data);
+    
+}
 
 void add_directory_files(const char *path, ThreadData *thread_data) {
     DIR *dir;
@@ -208,45 +187,55 @@ void add_directory_files(const char *path, ThreadData *thread_data) {
     closedir(dir);
 }
 
-    ThreadData *check_arguments(char *argv[], int argc, int *threads, ThreadData * thread_data) {
-        int opt;
-        *threads = 1;
+int check_arguments(char *argv[], int argc, int threads) {
+    int opt;
+    threads = 1;  // Default to one thread
 
-        int total_files = 0;
-
-        while ((opt = getopt(argc, argv, "j:")) != -1) {  
-            switch (opt) {
-                case 'j':
-                    *threads = atoi(optarg);
-                    break;
-                default:
-                    exit(EXIT_FAILURE);
-            }
+    while ((opt = getopt(argc, argv, "j:")) != -1) {
+        switch (opt) {
+            case 'j':
+                threads = atoi(optarg);  // Set thread count based on -j option
+                break;
+            default:
+                fprintf(stderr, "Usage: %s [-j threads] [files...]\n", argv[0]);
+                exit(EXIT_FAILURE);
         }
+    }
 
-        for (int i = optind; i < argc; i++) {
-                thread_data->files = realloc(thread_data->files, (total_files +1) * sizeof(char *));
-                thread_data->arguments = realloc(thread_data->arguments, (total_files +1) * sizeof(char *));
-                if (thread_data->files == NULL) {
-                    perror("Failed to reallocate memory");
-                    exit(EXIT_FAILURE);
-                }
+    return threads;
+}
 
-            thread_data->files[total_files] = malloc(strlen(argv[i])+1);
-            thread_data->arguments[total_files] = malloc(strlen(argv[i])+1);
-            strcpy(thread_data->files[total_files], argv[i]);
-            strcpy(thread_data->arguments[total_files], argv[i]);
-            
-            total_files++;
-            
-        }
-        thread_data->num_files = total_files;
-        thread_data->total_files = total_files;
+void process_argument(char *arg, pthread_mutex_t *mutex,int threads) {
+    // Create a new ThreadData for the argument
+    ThreadData *current_thread_data = init_struct(mutex);
+
+    // Allocate memory for the single file path
+    current_thread_data->files = malloc(sizeof(char *));
+    if (!current_thread_data->files) {
+        perror("Failed to allocate memory for files");
+        exit(EXIT_FAILURE);
+    }
+
+    // Copy the argument into the struct
+    current_thread_data->files[0] = strdup(arg);
+    if (!current_thread_data->files[0]) {
+        perror("Failed to copy file path");
+        free(current_thread_data->files);
+        free(current_thread_data);
+        exit(EXIT_FAILURE);
+    }
+
     
-        return thread_data;
-    }
-void print_function(ThreadData *thread_data, int total_size) {
-    for (int i = 0; i < thread_data->num_files; i++) {
-        printf("%d %s\n", total_size, thread_data->arguments[i]);
-    }
+    current_thread_data->total_files = 1;
+    current_thread_data->mutex = mutex;
+    
+
+    // Call the thread handler to process this file/directory
+    int sizes = thread_handler(threads, current_thread_data);
+
+    // Print the size for this argument
+    printf("%d  %s\n", sizes, arg);
+
+    // Clean up the current_thread_data structure after processing this argument
+    destroy_struct(current_thread_data);
 }

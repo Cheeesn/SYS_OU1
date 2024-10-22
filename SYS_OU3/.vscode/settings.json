@@ -27,6 +27,8 @@
         "utility": "c",
         "vector": "c",
         "filesystem": "c",
-        "iterator": "c"
+        "iterator": "c",
+        "stat.h": "c",
+        "stdio.h": "c"
     }
 }
