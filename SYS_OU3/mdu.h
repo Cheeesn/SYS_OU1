@@ -18,7 +18,8 @@ typedef struct {
     char **arguments;    // Original command-line arguments
     pthread_mutex_t *mutex; 
     sem_t *semaphore;    
-    int *sizes;          // Sizes of files
+    int *sizes;
+    int exit_code;          // Sizes of files
 } ThreadData;
 typedef struct {
     ThreadData *thread_data;
@@ -35,8 +36,9 @@ typedef struct {
  *
  * Returns: None.
  */
+void add_directory_files(const char *path, ThreadData *thread_data);
 void initialize_resources(pthread_mutex_t *mutex, sem_t *semaphore, int threads, ThreadData *thread_data);
-
+ThreadData *init_struct(void);
 /**
  * destroy_resources() - Destroys mutex and semaphore resources.
  * @mutex: A pointer to the mutex to be destroyed.
@@ -88,7 +90,7 @@ void destroy_struct(ThreadData *thread_data);
  *
  * Returns: A pointer to a ThreadData structure containing file paths and metadata.
  */
-ThreadData *collect_file_paths(int argc, char *argv[], int *threads, int *exit_code);
+ThreadData *collect_file_paths(int argc, char *argv[], int *threads, int *exit_code,ThreadData * thread_data) ;
 
 /**
  * store_file_paths() - Recursively stores file paths in the ThreadData structure.
@@ -109,7 +111,7 @@ void store_file_paths(const char *path, ThreadData *thread_data, int *exit_code)
  *
  * Returns: A pointer to an array of strings containing valid file paths.
  */
-char** check_arguments(char *argv[], int argc, int *threads, int *num_files);
+ThreadData *check_arguments(char *argv[], int argc, int *threads, ThreadData * thread_data);
 
 /**
  * print_function() - Prints the total size of files for each argument.
