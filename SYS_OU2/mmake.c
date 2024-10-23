@@ -1,4 +1,3 @@
-#include "mmake.h"
 /*
  * Kurs:5DV088 Systemnäraprogrammering
  *
@@ -7,7 +6,9 @@
  *
  * Version information:
  *   2024-10-03: v1.0.
+ *   2024-11-01: v2.0
  */
+#include "mmake.h"
 
 int main(int argc, char *argv[]) {
     makefile *make;
@@ -17,9 +18,9 @@ int main(int argc, char *argv[]) {
     // Parse flags and open the file accordingly
     parse_flags(argc, argv, &B_flag, &s_flag, &f_flag, &fp);
 
-    // Read and process the makefile
+
     make = read_makefile(fp);
-    build_prerequisites(make, argv, s_flag, B_flag, f_flag);
+    handle_targets(make, argv, s_flag, B_flag, f_flag);
 
     // Cleanup
     makefile_del(make);
@@ -27,8 +28,6 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
-
 void parse_flags(int argc, char **argv, int *B_flag, int *s_flag, int *f_flag, FILE **fp) {
     char opt;
 
@@ -53,13 +52,10 @@ void parse_flags(int argc, char **argv, int *B_flag, int *s_flag, int *f_flag, F
         }
     }
 
-
     if(*f_flag == 0) {
         *fp = open_makefile("mmakefile");
     }
 }
-
-
 FILE* open_makefile(const char *filename) {
     FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
@@ -68,11 +64,10 @@ FILE* open_makefile(const char *filename) {
     }
     return fp;
 }
-
-
 makefile* read_makefile(FILE *fp){
     makefile* make;
     make = parse_makefile(fp);
+
     if(make == NULL){
         fprintf(stderr, "mmakefile: Could not parse makefile\n");
         exit(EXIT_FAILURE);
@@ -80,80 +75,53 @@ makefile* read_makefile(FILE *fp){
 
     return make;
 }
-void build_prerequisites(makefile *make,  char *argv[], int s_flag, int B_flag, int f_flag) {
-
+void handle_targets(makefile *make,  char *argv[], int s_flag, int B_flag, int f_flag) {
     char * target = argv[optind];
     
     if (target == NULL){//No target specified use default
-        build_target(make, makefile_default_target(make), s_flag, B_flag, f_flag);
+        process_target(make, makefile_default_target(make), s_flag, B_flag, f_flag);
     }
     else{
         while (target != NULL){
-            build_target(make,target, s_flag, B_flag, f_flag);
+            process_target(make,target, s_flag, B_flag, f_flag);
             optind++;
             target = argv[optind];
         }
     }
-
 }
-
-void build_target(makefile *make, const char* target, int s_flag, int B_flag, int f_flag){
+void process_target(makefile *make, const char* target, int s_flag, int B_flag, int f_flag){
     const char **prereqs;
     rule *rules = makefile_rule(make,target);
+
     if(rules == NULL){//Checking if there not rules if there is no target error otherwise return
         if (access(target, F_OK) != 0){
             fprintf(stderr, "mmake: No rule to make target '%s'.\n", target);
             exit(EXIT_FAILURE);
         }
-    return; 
+        return; 
     }
     prereqs = rule_prereq(rules);
     
     for (int i = 0; prereqs[i] != NULL; i++) {//Looping through every prereq
-        build_target(make, prereqs[i], s_flag, B_flag, f_flag);
+        process_target(make, prereqs[i], s_flag, B_flag, f_flag);
     }
+
+    check_and_build_target(rules,target,B_flag,s_flag,prereqs);
+}
+void check_and_build_target(rule *rules, const char* target, int B_flag,int s_flag, const char ** prereqs){
     //Checking force flag, or target doesnt exist/acessable or if it has been modified
     if(access(target, F_OK) == -1 ||B_flag == 1 || check_modification_time(target,prereqs)){
         char **cmd = rule_cmd(rules);
-        pid_t pid;
-        
         if(s_flag == 0){//Not silent print out commands 
-            
-            for(int i = 0; cmd[i] != NULL;i++){
-                if(i != 0){
-                    printf(" ");
-                }
-                printf("%s", cmd[i]);
-            }
-        printf("\n");
+            print_function(cmd);
         }
-
-        if((pid = fork()) == -1){
-            perror("Fork failed");
-            exit(EXIT_FAILURE);
-        }
-        if(pid == 0){
-            if(execvp(*cmd, cmd) < 0){
-                perror(*cmd);
-                exit(EXIT_FAILURE);
-            }   
-            
-        }
-        //waiting for children
-        int status;
-        waitpid(pid, &status, 0);
-
-        if (WIFEXITED(status)){
-            int exit_status = WEXITSTATUS(status);        
-            printf("Exit status of the child was %d\n", exit_status);
-        }
+        fork_and_execute(cmd);
     }
 }
 int check_modification_time(const char *target, const char **prereqs) {
     struct stat file_info;
     
-    if (stat(target, &file_info) < 0) {//checking if stat returns info correctly
-       
+    if (stat(target, &file_info) < 0) {
         perror(target);
         exit(EXIT_FAILURE); 
     }
@@ -173,4 +141,38 @@ int check_modification_time(const char *target, const char **prereqs) {
     }
 
     return 0;
+}
+void fork_and_execute(char **cmd){
+    pid_t pid;
+
+    if((pid = fork()) == -1){
+            perror("Fork failed");
+            exit(EXIT_FAILURE);
+        }
+    if(pid == 0){//Check if child
+        if(execvp(*cmd, cmd) < 0){
+            perror(*cmd);
+            exit(EXIT_FAILURE);
+        }   
+    }
+}
+void wait_for_child(void){
+    int status;
+
+    if(wait(&status) < 0){
+        perror("wait");
+        exit(EXIT_FAILURE);
+    }
+    if(status != 0){
+        exit(EXIT_FAILURE);
+    }
+}
+void print_function(char **cmd){
+    for(int i = 0; cmd[i] != NULL;i++){
+            if(i != 0){
+                printf(" ");
+            }
+            printf("%s", cmd[i]);
+        }
+    printf("\n");
 }
