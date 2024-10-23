@@ -8,56 +8,73 @@
  * Version information:
  *   2024-10-03: v1.0.
  */
-int main(int argc, char *argv[]){
-    makefile* make;
+
+int main(int argc, char *argv[]) {
+    makefile *make;
     FILE *fp = NULL;
-    int B_flag = 0;
-    int s_flag = 0;
-    int f_flag = 0;
-    char opt;
-    while((opt = getopt(argc,argv,"f:Bs")) != -1){//Checking what flags are present
-        switch(opt){
-            case 'f':
-                f_flag = 1; 
-                if((fp = fopen(optarg,"r")) == NULL){
-                    perror(optarg);
-                    exit(EXIT_FAILURE);
-                }
-            break;
+    int B_flag = 0, s_flag = 0, f_flag = 0;
 
-            case 'B':
-                B_flag = 1;
-            break;
+    // Parse flags and open the file accordingly
+    parse_flags(argc, argv, &B_flag, &s_flag, &f_flag, &fp);
 
-            case 's':
-                s_flag  = 1;
-            break;
-
-            default:
-            fprintf(stderr,"No flags set");
-            exit(EXIT_FAILURE);
-        }
-        
-    }
-    if(f_flag == 0){
-        if((fp = fopen("mmakefile","r")) == NULL){//No file provided use mmakefile
-            perror(optarg);
-            exit(EXIT_FAILURE);
-        }
-    }
-    
+    // Read and process the makefile
     make = read_makefile(fp);
-    build_prerequisites(make,argv,s_flag,B_flag, f_flag);
+    build_prerequisites(make, argv, s_flag, B_flag, f_flag);
+
+    // Cleanup
     makefile_del(make);
     fclose(fp);
+
     return 0;
 }
+
+
+void parse_flags(int argc, char **argv, int *B_flag, int *s_flag, int *f_flag, FILE **fp) {
+    char opt;
+
+    while((opt = getopt(argc, argv, "f:Bs")) != -1) {
+        switch (opt) {
+            case 'f':
+                *f_flag = 1;
+                *fp = open_makefile(optarg);  // Open file passed via -f
+                break;
+
+            case 'B':
+                *B_flag = 1;
+                break;
+
+            case 's':
+                *s_flag = 1;
+                break;
+
+            default:
+                fprintf(stderr, "Invalid option\n");
+                exit(EXIT_FAILURE);
+        }
+    }
+
+
+    if(*f_flag == 0) {
+        *fp = open_makefile("mmakefile");
+    }
+}
+
+
+FILE* open_makefile(const char *filename) {
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror(filename);
+        exit(EXIT_FAILURE);
+    }
+    return fp;
+}
+
 
 makefile* read_makefile(FILE *fp){
     makefile* make;
     make = parse_makefile(fp);
     if(make == NULL){
-        perror("mmakefile");
+        fprintf(stderr, "mmakefile: Could not parse makefile\n");
         exit(EXIT_FAILURE);
     }
 
@@ -85,7 +102,7 @@ void build_target(makefile *make, const char* target, int s_flag, int B_flag, in
     rule *rules = makefile_rule(make,target);
     if(rules == NULL){//Checking if there not rules if there is no target error otherwise return
         if (access(target, F_OK) != 0){
-            perror("mmake");
+            fprintf(stderr, "mmake: No rule to make target '%s'.\n", target);
             exit(EXIT_FAILURE);
         }
     return; 
@@ -123,13 +140,14 @@ void build_target(makefile *make, const char* target, int s_flag, int B_flag, in
             
         }
         //waiting for children
-        int wait_check;
-        wait(&wait_check);
-        if (wait_check > 0){
-            exit(EXIT_FAILURE);
+        int status;
+        waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status)){
+            int exit_status = WEXITSTATUS(status);        
+            printf("Exit status of the child was %d\n", exit_status);
         }
     }
-
 }
 int check_modification_time(const char *target, const char **prereqs) {
     struct stat file_info;
@@ -144,6 +162,8 @@ int check_modification_time(const char *target, const char **prereqs) {
     
     for (int i = 0; prereqs[i] != NULL; i++) {//checking every prereq for modification time
         if (stat(prereqs[i], &file_info) < 0) {
+            perror(target);
+            exit(EXIT_FAILURE);
         }
         prereq_time = file_info.st_mtime;
         

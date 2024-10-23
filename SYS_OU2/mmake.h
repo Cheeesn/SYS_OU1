@@ -59,3 +59,5 @@ void build_prerequisites(makefile *make, char *argv[], int s_flag, int B_flag, i
  * Returns: 1 if a prerequisite is newer than the target, 0 otherwise.
  */
 int check_modification_time(const char *target, const char **prereqs);
+void parse_flags(int argc, char **argv, int *B_flag, int *s_flag, int *f_flag, FILE **fp);
+FILE* open_makefile(const char *filename);
