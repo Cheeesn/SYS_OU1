@@ -54,10 +54,11 @@ void* thread_calculate_size(void* arg) {
     int thread_size = 0; 
 
     while (1) {
-        int file_index; 
+        int file_index;
+        char path[PATH_MAX]; // Local variable to store the file path
 
         pthread_mutex_lock(data->mutex);
-        
+
         // Check if all files have been processed
         if (data->current_index >= data->total_files) {
             pthread_mutex_unlock(data->mutex);
@@ -66,29 +67,33 @@ void* thread_calculate_size(void* arg) {
 
         // Get the next file to process
         file_index = data->current_index++; // Use the current index
+        
+        // Copy the file path into a local variable (thread-safe)
+        strncpy(path, data->files[file_index], PATH_MAX - 1);
+        path[PATH_MAX - 1] = '\0'; // Ensure null-termination
+
         pthread_mutex_unlock(data->mutex);
-        //fprintf(stderr,"%s\n", data->files[data->current_index]);
+
+        // Now process the file outside the critical section
         struct stat path_stat;
-        if (lstat(data->files[file_index], &path_stat) != 0) {
-            fprintf(stderr, "Warning: Failed to get stats for '%s': ", data->files[file_index]);
+        if (lstat(path, &path_stat) != 0) {
+            fprintf(stderr, "Warning: Failed to get stats for '%s': ", path);
             perror("lstat");
             continue;
         }
 
         // Calculate the size and accumulate it in thread_size
-        thread_size += calculate_size(data->files[file_index]);
-        
+        thread_size += calculate_size(path);
+
         // If it's a directory, add its files to the queue for future processing
         if (S_ISDIR(path_stat.st_mode)) {
-            add_directory_files(data->files[file_index], data);
+            add_directory_files(path, data);
         }
     }
 
     // Store the calculated size in the thread_data structure
-    
     data->sizes[thread_args->thread_index] = thread_size; // Save this thread's size
     
-
     return NULL;
 }
 
