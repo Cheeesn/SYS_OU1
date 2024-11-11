@@ -11,36 +11,37 @@
 
 int main(int argc, char *argv[]) {
     int threads = 1;
-    pthread_mutex_t mutex;
     
-
-    // Initialize ThreadData and collect initial settings (like thread count)
-    
+    ThreadData *thread_data = malloc(sizeof(ThreadData));
     threads = check_arguments(argv, argc, threads);
+    pthread_mutex_t mutex;
+    pthread_mutex_init(&mutex, NULL);
+    thread_data->mutex = mutex;
+	
+	for (int i = optind; i < argc; i++) {
+		thread_data = init_struct(thread_data);
+		process_argument(argv[i], thread_data);
 
-    // Initialize resources (mutex, semaphore)
+		int sizes = thread_handler(threads, thread_data);
+		printf("%d  %s\n", sizes, argv[i]);
     
-
-    // Loop through each argument (file or directory) and process it
-    for (int i = optind; i < argc; i++) {
-       process_argument(argv[i], &mutex, threads);
-    }
-
-    // Cleanup allocated resources for the main thread data
-    //destroy_struct(thread_data);
+		destroy_struct(thread_data);
+	}
+	if(thread_data->exit_code == 1){
+		free(thread_data);
+		destroy_resources(&mutex);
+		exit(EXIT_FAILURE);
+	}
     destroy_resources(&mutex);
-
+    free(thread_data);
     return 0;
 }
-ThreadData *init_struct(pthread_mutex_t *mutex){
-    ThreadData *thread_data = malloc(sizeof(ThreadData));
+ThreadData *init_struct(ThreadData *thread_data){
     thread_data->files = NULL;
-    thread_data->total_files = 1;
+    thread_data->total_files = 0;
     thread_data->sizes = 0;
     thread_data->current_index = 0;
     thread_data->exit_code = 0;
-    pthread_mutex_init(mutex, NULL);
-    thread_data->mutex = mutex;
     return thread_data;
 }
 
@@ -57,22 +58,22 @@ void* thread_calculate_size(void* arg) {
         int file_index;
         char path[PATH_MAX]; // Local variable to store the file path
 
-        pthread_mutex_lock(data->mutex);
-
+        
+        pthread_mutex_lock(&data->mutex);
         // Check if all files have been processed
         if (data->current_index >= data->total_files) {
-            pthread_mutex_unlock(data->mutex);
+            pthread_mutex_unlock(&data->mutex);
             break;
         }
-
+        
         // Get the next file to process
         file_index = data->current_index++; // Use the current index
         
         // Copy the file path into a local variable (thread-safe)
         strncpy(path, data->files[file_index], PATH_MAX - 1);
         path[PATH_MAX - 1] = '\0'; // Ensure null-termination
-
-        pthread_mutex_unlock(data->mutex);
+        
+        pthread_mutex_unlock(&data->mutex);
 
         // Now process the file outside the critical section
         struct stat path_stat;
@@ -132,7 +133,7 @@ int thread_handler(int threads, ThreadData *thread_data) {
         total_size += thread_data->sizes[i];  // Sum up sizes from each thread
     }
 
-    free(thread_data->sizes); // Free the allocated memory for sizes
+    
     return total_size; // Return the total size calculated
 }
 
@@ -153,20 +154,20 @@ void destroy_struct(ThreadData *thread_data) {
         free(thread_data->files[i]);
     }
     free(thread_data->files);
-    free(thread_data);
-    
+    free(thread_data->sizes);
 }
 
 void add_directory_files(const char *path, ThreadData *thread_data) {
     DIR *dir;
     struct dirent *entry;
     char fullpath[PATH_MAX];
+    
 
     if ((dir = opendir(path)) == NULL) {
-        fprintf(stderr, "Failed to open directory '%s'\n", path);
-        pthread_mutex_lock(thread_data->mutex);
+        fprintf(stderr, "Cannot read open directory '%s': Permission denied\n", path);
+        pthread_mutex_lock(&thread_data->mutex);
         thread_data->exit_code = 1;
-        pthread_mutex_unlock(thread_data->mutex);
+        pthread_mutex_unlock(&thread_data->mutex);
         return;
     }
 
@@ -177,16 +178,18 @@ void add_directory_files(const char *path, ThreadData *thread_data) {
         }
 
         snprintf(fullpath, sizeof(fullpath), "%s/%s", path, entry->d_name);
-        
-        pthread_mutex_lock(thread_data->mutex);
+        pthread_mutex_lock(&thread_data->mutex);
+        // Allocate memory for new files outside the critical section
         thread_data->files = realloc(thread_data->files, (thread_data->total_files + 1) * sizeof(char *));
         if (!thread_data->files) {
             perror("Failed to allocate memory for files");
+            closedir(dir);
             exit(EXIT_FAILURE);
         }
-        thread_data->files[thread_data->total_files] = strdup(fullpath); // Duplicate the path
+
+        thread_data->files[thread_data->total_files] = strdup(fullpath);
         thread_data->total_files++;
-        pthread_mutex_unlock(thread_data->mutex);
+        pthread_mutex_unlock(&thread_data->mutex);
     }
 
     closedir(dir);
@@ -210,10 +213,8 @@ int check_arguments(char *argv[], int argc, int threads) {
     return threads;
 }
 
-void process_argument(char *arg, pthread_mutex_t *mutex,int threads) {
-    // Create a new ThreadData for the argument
-    ThreadData *current_thread_data = init_struct(mutex);
-
+void process_argument(char *arg,ThreadData *current_thread_data) {
+    
     // Allocate memory for the single file path
     current_thread_data->files = malloc(sizeof(char *));
     if (!current_thread_data->files) {
@@ -225,22 +226,9 @@ void process_argument(char *arg, pthread_mutex_t *mutex,int threads) {
     current_thread_data->files[0] = strdup(arg);
     if (!current_thread_data->files[0]) {
         perror("Failed to copy file path");
-        free(current_thread_data->files);
         free(current_thread_data);
         exit(EXIT_FAILURE);
     }
 
-    
     current_thread_data->total_files = 1;
-    current_thread_data->mutex = mutex;
-    
-
-    // Call the thread handler to process this file/directory
-    int sizes = thread_handler(threads, current_thread_data);
-
-    // Print the size for this argument
-    printf("%d  %s\n", sizes, arg);
-
-    // Clean up the current_thread_data structure after processing this argument
-    destroy_struct(current_thread_data);
 }

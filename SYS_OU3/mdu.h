@@ -14,7 +14,7 @@ typedef struct {
     char **files;        // Array of file paths
     int total_files;     // Total number of files
     int current_index;   // Current index for file processing
-    pthread_mutex_t *mutex;    
+    pthread_mutex_t mutex;    
     int *sizes;
     int exit_code;          // Sizes of files
 } ThreadData;
@@ -35,7 +35,7 @@ typedef struct {
  */
 void add_directory_files(const char *path, ThreadData *thread_data);
 
-ThreadData *init_struct(pthread_mutex_t *mutex);
+ThreadData *init_struct(ThreadData *thread_data);
 /**
  * destroy_resources() - Destroys mutex and semaphore resources.
  * @mutex: A pointer to the mutex to be destroyed.
@@ -118,4 +118,4 @@ int check_arguments(char *argv[], int argc, int threads);
  * Returns: None.
  */
 void print_function(ThreadData *thread_data, int total_size);
-void process_argument(char *arg, pthread_mutex_t *mutex,int threads);
+void process_argument(char *arg,ThreadData *current_thread_data);
